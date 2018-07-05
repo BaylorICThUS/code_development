@@ -1,0 +1,182 @@
+#include "../include/code_development.h"
+#include "../include/pCT_development.h"
+
+//template<typename T> std::string quote_text(T text ){ return std::string("\"") + std::string(text) + std::string("\""); }
+template<typename T> std::string echo_cmd(T statement)
+{
+	#if defined(_WIN32) || defined(_WIN64)
+		return std::string(WIN_ECHO_CMD) + std::string(SPACE_STRING) + std::string(statement);
+	#else
+		return std::string(BASH_ECHO_CMD) + std::string(SPACE_CHAR) + quote_text(statement);
+	#endif
+}
+template<typename T> std::string colored_text(T statement, const char* text_color_code, const char* background_color_code, const char* underlining_coding )
+{
+	std::string color_encoding = color_encoding_statement(text_color_code, background_color_code, underlining_coding );
+	return std::string(color_encoding + std::string(statement)+ std::string(CLOSE_COLOR_ESCAPE_SEQ));
+}
+template<typename T> std::string echo_statement(T statement, const char* text_color_code, const char* background_color_code, const char* underlining_coding )
+{
+	std::string in_statement = colored_text(statement, text_color_code, background_color_code, underlining_coding );
+	return echo_cmd(in_statement);
+}
+template<typename T> void print_colored_text(T statement, const char* text_color_code, const char* background_color_code, const char* underlining_coding )
+{
+	std::string echo_command = echo_statement<T>(statement, text_color_code, background_color_code, underlining_coding );
+	system(echo_command.c_str());
+}
+template<typename T> void print_labeled_value(const char* statement, T value, const char* statement_color_code, const char* value_color_code, const char* background_color_code, const char* underlining_coding )
+{
+	std::stringstream value_string;
+	value_string << value;
+	std::string value_string_colored = colored_text(value_string.str(), value_color_code, background_color_code, underlining_coding );
+	std::string out_string_colored = std::string(statement) + value_string_colored;
+	print_colored_text(out_string_colored, statement_color_code, background_color_code, underlining_coding );
+}
+template<typename T> void vector_2_disk( const char* filename_base, const char* directory, const char* folder, std::vector<T> data, const int x_max, const int y_max, const int z_max, const bool single_file )
+{
+	//std::ofstream output_file;
+	int elements = data.size();
+	int index;
+	int num_files = z_max;
+	int z_start = 0;
+	int z_end = 1;
+	if( single_file )
+	{
+		num_files = 1;
+		z_end = z_max;
+	}
+	for( int file = 0; file < num_files; file++)
+	{
+		if( num_files == z_max )
+			sprintf( __filename, "%s%s/%s_%d.txt", directory, folder, filename_base, file );
+		else
+			sprintf( __filename, "%s%s/%s.txt", directory, folder, filename_base );
+		__output_file.open(__filename);
+		for(int z = z_start; z < z_end; z++)
+		{
+			for(int y = 0; y < y_max; y++)
+			{
+				for(int x = 0; x < x_max; x++)
+				{
+					index = x + ( y * x_max ) + ( z * x_max * y_max );
+					if( index >= elements )
+						break;
+					__output_file << data[index] << " ";
+				}
+				if( index >= elements )
+					break;
+				__output_file << std::endl;
+			}
+			if( index >= elements )
+				break;
+		}
+		z_start += 1;
+		z_end += 1;
+		__output_file.close();
+	}
+}
+template<typename T> void combine_x_slices( const char* filename_base, const char* directory, const char* folder, const int x_max, const int y_max, const int z_max, bool overwrite )
+{
+	sprintf(__filename, "%s%s%s.txt", directory, folder, filename_base);
+	T value;
+	std::vector<T>	data;
+	std::fstream	outfile(__filename, std::ofstream::out);
+	if(outfile.fail() || overwrite  )//|| ( outfile.seekg (0, outfile.end) == 0 )
+	{
+		cout << "Combining file: " << __filename << endl;// "\n\t of size " << outfile.seekg (0, outfile.end) << endl;
+		for( int i = 0; i < z_max; i++)
+		{
+			sprintf(__filename, "%s%s%s_%d.txt", directory, folder, filename_base, i);
+			std::ifstream	file(__filename);
+			while(std::getline(file, __line__input))	// Read one line at a time into the variable line:
+			{
+				__line_sstream << __line__input;
+				while(__line_sstream >> value)
+					data.push_back(value);
+			}
+			file.close();
+		}
+	}
+	else
+		cout << "File exists and overwriting is off" << endl;
+	//vector_2_disk( filename_base, directory, folder, data, x_max, y_max, z_max, true);
+}
+template<typename B, typename D, typename F> void concat_x_slices( B filename_base, D directory, F folder, const int x_max, const int y_max, const int z_max, bool overwrite )
+{
+	//cout<< "concat_x_slices: " << endl;
+    __path = string_cat(directory, folder);
+	__fname = string_cat(filename_base, UNDERSCORE_STR, 0, TXT_FILE_EXT);
+	//cout<< "string_cat: " << __filepath << endl;
+    if(fileExists(__path + __fname))
+    {
+        __fname = string_cat(filename_base, TXT_FILE_EXT);
+        bool merged_file_exists = fileExists(__path + __fname);
+        //if((__path + __fname) == std::string("D:\\pCT\\pCT_data\\reconstruction_data\\CTP404_Sensitom\\Experimental\\B_25600\\TV=1\\B_25600_L_0.000200_TV_1_A_0.650000_L0_0_Nk_10\\x_0.txt") )
+        //    overwrite = true;
+        if ( (merged_file_exists && overwrite) || !merged_file_exists )
+        //if ( !fileExists(__path + __fname) || overwrite)
+        {
+            //std::ofstream outfile(__path + __fname, std::ofstream::out);
+            __output_file.open(__path + __fname, std::ofstream::out);
+            cout << "\tCreating: " << __fname << endl;
+            for( int z = 0; z < z_max; z++)
+            {
+                __fname = string_cat(filename_base, UNDERSCORE_STR, z, TXT_FILE_EXT);
+                cout << "\t\tMerging: " << __fname << endl;
+                std::ifstream slice_file(__path + __fname);
+                if (slice_file.is_open())
+                {
+                    //outfile << slice_file.rdbuf();
+                    __output_file << slice_file.rdbuf();
+                    slice_file.close();
+                }
+            };
+            //outfile.close();
+            __output_file.close();
+//            __loop_index++;
+//            if(__loop_index > __KILL_LOOP_INDEX)
+//                exit_program();
+            pkill(__loop_index, __KILL_LOOP_INDEX, true);
+        }
+        else
+            cout << "Output file exists and overwriting is turned off" << endl;
+    }
+    else
+        cout << "Slice files do not exist" << endl;
+    //__fcall_index++;
+    if(__fcall_index > __KILL_FCALL_INDEX)
+        exit_program();
+}
+template<typename B, typename D, typename F> void combine_x_slices( B filename_base, D directory, F folder, const int iteration, const int x_max, const int y_max, const int z_max, bool overwrite )
+{
+    //cout<< "combine_x_slices: " << endl;
+    __fname = stringify(filename_base) + std::to_string(iteration);
+    concat_x_slices( __fname, directory, folder, x_max, y_max, z_max, overwrite );
+	//exit_program();
+}
+template<typename B, typename D, typename F> void combine_x_n_slices( B filename_base, D directory, F folder, const int iterations, const int x_max, const int y_max, const int z_max, bool overwrite )
+{
+    //cout<< "combine_x_n_slices: " << endl;
+//    for( int iteration = 0; iteration <= iterations; iteration++)
+//	{
+//		__fname = stringify(filename_base) + std::to_string(iteration);
+//		concat_x_slices( __fname, directory, folder, x_max, y_max, z_max, overwrite );
+//	}
+	for( int iteration = 0; iteration <= iterations; iteration++)
+        combine_x_slices( filename_base, directory, folder, iteration, x_max, y_max, z_max, overwrite );
+	//exit_program();
+}
+template<typename B, typename D> void combine_set_x_n_slices( B filename_base, D directory, const int iterations, const int x_max, const int y_max, const int z_max, bool overwrite )
+{
+            __i = 0, __fcall_index = 1, __loop_index = 1;
+            __line_sstream = ls<D>(PCT_DATA_DIR);
+            while(__line_sstream >> __termout)
+			{
+				__string = __termout + "\\";
+				cout<< __i++ << ": " << __termout << endl;
+				combine_x_n_slices( filename_base, directory, __string, iterations, x_max, y_max, z_max, overwrite );
+                //exit_program();
+			}
+			__line_sstream.clear();
+}
